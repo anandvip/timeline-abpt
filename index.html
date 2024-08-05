@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improved Project Timeline</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        div.timeline::before {
+            content: '';
+            position: absolute;
+            width: 3.5pt;
+            background-color: purple;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -1px;
+        }
+        .stage {
+            padding: 10px 40px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+        }
+        .stage::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            right: -17px;
+            background-color: #fff;
+            border: 4px solid #1a73e8;
+            top: 15px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .left { left: 0; }
+        .right { left: 50%; }
+        .left::before, .right::before {
+            content: " ";
+            height: 0;
+            position: absolute;
+            top: 22px;
+            width: 0;
+            z-index: 1;
+            border: medium solid #1a73e8;
+        }
+        .left::before {
+            right: 30px;
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent #1a73e8;
+        }
+        .right::before {
+            left: 30px;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent #1a73e8 transparent transparent;
+        }
+        .right::after { left: -16px; }
+        .content {
+            padding: 20px 30px;
+            background-color: #f8f9fa;
+            position: relative;
+            border-radius: 6px;
+            border: 1px solid #1a73e8;
+        }
+    .content {
+    padding: 20px 30px;
+    background-color: #f8f9fa7d;
+    position: relative;
+    border-radius: 6px;
+    border: 1px solid #1a73e8;
+}
+        .stage h2 { color: #1a73e8; }
+        .stage-actions { margin-top: 10px; }
+        .stage-actions button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .stage-actions button:hover { background-color: #155db1; }
+        .stage-actions .delete-stage {
+            background: linear-gradient(to right, #ff8c00, #ff4500);
+        }
+        .stage-actions .delete-stage:hover {
+            background: linear-gradient(to right, #ff7300, #ff3800);
+        }
+        #addStageBtn, #themeToggle {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #addStageBtn {
+            background-color: #28a745;
+        }
+        #addStageBtn:hover {
+            background-color: #218838;
+        }
+        #themeToggle {
+            background-color: #6c757d;
+        }
+        #themeToggle:hover {
+            background-color: #5a6268;
+        }
+        .toast-form input, .toast-form textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        .toast-form button { margin-right: 5px; }
+        body.dark-theme {
+            background-color: #333;
+            color: #f4f4f4;
+        }
+        .dark-theme .container { background-color: #444; }
+      
+      .timeline::before {
+    content: '';
+    position: absolute;
+    width: 0.5pt;
+    background-color: #1a73e8;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    margin-left: -1px;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="projectTitle">Project Timeline</h1>
+        <div id="timeline" class="timeline"></div>
+        <button id="addStageBtn">Add New Stage</button>
+        <button id="themeToggle">Toggle Theme</button>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+    const ProjectManager = {
+        stages: [],
+
+        init: function() {
+            this.loadProject();
+            this.setupEventListeners();
+            this.renderTimeline();
+        },
+
+        loadProject: function() {
+            const savedStages = JSON.parse(localStorage.getItem('projectStages')) || [];
+            this.stages = savedStages.map(stage => {
+                if (!stage.createdAt) {
+                    const today = new Date();
+                    today.setHours(12 + Math.floor(Math.random() * 12), Math.floor(Math.random() * 60), 0, 0);
+                    stage.createdAt = today.toISOString();
+                }
+                return stage;
+            });
+
+            const savedTitle = localStorage.getItem('projectTitle') || 'Project Timeline';
+            $('#projectTitle').text(savedTitle);
+
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            $('body').toggleClass('dark-theme', savedTheme === 'dark');
+        },
+
+        setupEventListeners: function() {
+            $('#addStageBtn').on('click', () => this.showStageForm());
+            $('#projectTitle').on('click', () => this.editProjectTitle());
+            $('#themeToggle').on('click', () => this.toggleTheme());
+            $(document).on('click', '.edit-stage', (e) => this.showStageForm($(e.target).data('index')));
+            $(document).on('click', '.delete-stage', (e) => this.deleteStage($(e.target).data('index')));
+        },
+
+        renderTimeline: function() {
+            const $timeline = $('#timeline').empty();
+            this.stages.forEach((stage, index) => {
+                const $stage = $(`
+                    <div class="stage ${index % 2 === 0 ? 'left' : 'right'}">
+                        <div class="content">
+                            <h2>${stage.name}</h2>
+                            <p>${stage.description}</p>
+                            <p>Duration: ${stage.duration} days</p>
+                            <p>Created: ${this.formatDate(stage.createdAt)}</p>
+                            <div class="stage-actions">
+                                <button class="edit-stage" data-index="${index}">Edit</button>
+                                <button class="delete-stage" data-index="${index}">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                $timeline.append($stage);
+            });
+            this.updateTotalDuration();
+        },
+
+        showStageForm: function(index = null) {
+            const stage = index !== null ? this.stages[index] : null;
+            const formHtml = `
+                <form class="toast-form">
+                    <input type="text" id="stageName" placeholder="Stage Name" value="${stage ? stage.name : ''}" required>
+                    <textarea id="stageDescription" placeholder="Stage Description" required>${stage ? stage.description : ''}</textarea>
+                    <input type="number" id="stageDuration" placeholder="Duration (days)" value="${stage ? stage.duration : ''}" required min="1">
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="button" class="btn btn-secondary" id="cancelStageForm">Cancel</button>
+                </form>
+            `;
+
+            toastr.info(formHtml, stage ? 'Edit Stage' : 'Add New Stage', {
+                closeButton: false,
+                timeOut: 0,
+                extendedTimeOut: 0,
+                tapToDismiss: false,
+                onShown: (toast) => {
+                    const $form = $('.toast-form', toast);
+                    const $cancel = $('#cancelStageForm', toast);
+
+                    $form.submit((e) => {
+                        e.preventDefault();
+                        const name = $('#stageName').val().trim();
+                        const description = $('#stageDescription').val().trim();
+                        const duration = parseInt($('#stageDuration').val());
+
+                        if (name && description && duration) {
+                            const stageData = {
+                                name,
+                                description,
+                                duration,
+                                createdAt: stage ? stage.createdAt : new Date().toISOString()
+                            };
+                            
+                            if (index !== null) {
+                                this.stages[index] = stageData;
+                            } else {
+                                this.stages.push(stageData);
+                            }
+                            
+                            this.saveStages();
+                            this.renderTimeline();
+                            toastr.remove(toast);
+                            toastr.success(index !== null ? 'Stage updated successfully' : 'New stage added successfully');
+                        } else {
+                            toastr.error('Please fill in all fields.');
+                        }
+                    });
+
+                    $cancel.click(() => toastr.remove(toast));
+                }
+            });
+        },
+
+        deleteStage: function(index) {
+            toastr.warning(
+                `<div>Are you sure you want to delete this stage?</div>
+                 <div style="margin-top:10px;">
+                   <button class="yes-btn" style="margin-right:5px;">Yes</button>
+                   <button class="no-btn">No</button>
+                 </div>`,
+                "Confirm Deletion",
+                {
+                    closeButton: false,
+                    timeOut: 0,
+                    extendedTimeOut: 0,
+                    tapToDismiss: false,
+                    onShown: (toast) => {
+                        $('.yes-btn', toast).click(() => {
+                            this.stages.splice(index, 1);
+                            this.saveStages();
+                            this.renderTimeline();
+                            toastr.remove(toast);
+                            toastr.success('Stage deleted successfully');
+                        });
+                        $('.no-btn', toast).click(() => toastr.remove(toast));
+                    }
+                }
+            );
+        },
+
+        editProjectTitle: function() {
+            toastr.info(
+                `<input type="text" id="newProjectTitle" value="${$('#projectTitle').text()}">
+                 <button id="saveProjectTitle">Save</button>
+                 <button id="cancelProjectTitle">Cancel</button>`,
+                'Edit Project Title',
+                {
+                    closeButton: false,
+                    timeOut: 0,
+                    extendedTimeOut: 0,
+                    tapToDismiss: false,
+                    onShown: (toast) => {
+                        $('#saveProjectTitle', toast).click(() => {
+                            const newTitle = $('#newProjectTitle').val().trim();
+                            if (newTitle) {
+                                $('#projectTitle').text(newTitle);
+                                localStorage.setItem('projectTitle', newTitle);
+                                toastr.remove(toast);
+                                toastr.success('Project title updated');
+                            } else {
+                                toastr.error('Please enter a title.');
+                            }
+                        });
+                        $('#cancelProjectTitle', toast).click(() => toastr.remove(toast));
+                    }
+                }
+            );
+        },
+
+        saveStages: function() {
+            localStorage.setItem('projectStages', JSON.stringify(this.stages));
+        },
+
+        updateTotalDuration: function() {
+            const totalDuration = this.stages.reduce((total, stage) => total + stage.duration, 0);
+            toastr.info(`Total project duration: ${totalDuration} days`);
+        },
+
+        toggleTheme: function() {
+            $('body').toggleClass('dark-theme');
+            const currentTheme = $('body').hasClass('dark-theme') ? 'dark' : 'light';
+            localStorage.setItem('theme', currentTheme);
+        },
+
+        formatDate: function(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+    };
+
+    ProjectManager.init();
+});
+    </script>
+</body>
+</html>
